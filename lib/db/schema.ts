@@ -6,6 +6,7 @@ import {
   timestamp,
   pgEnum,
   integer,
+  boolean,
 } from "drizzle-orm/pg-core";
 
 export const roleEnum = pgEnum("role", ["admin", "sales"]);
@@ -16,6 +17,9 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   passwordHash: text("password_hash").notNull(),
   role: roleEnum("role").notNull().default("sales"),
+  // Deactivated accounts can't log in, but their past sales/stock records
+  // stay intact and attributed to them in the ledger.
+  active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

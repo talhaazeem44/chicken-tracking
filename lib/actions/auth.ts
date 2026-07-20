@@ -46,6 +46,10 @@ export async function login(
     return { error: "Invalid username or password." };
   }
 
+  if (!user.active) {
+    return { error: "This account has been deactivated. Contact your admin." };
+  }
+
   await createSession({ userId: user.id, role: user.role, name: user.name });
 
   redirect(user.role === "admin" ? "/admin" : "/sales");

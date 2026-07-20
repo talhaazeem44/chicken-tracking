@@ -106,9 +106,24 @@ export async function getSalesTeam() {
       id: users.id,
       name: users.name,
       username: users.username,
+      active: users.active,
       createdAt: users.createdAt,
     })
     .from(users)
     .where(eq(users.role, "sales"))
     .orderBy(desc(users.createdAt));
+}
+
+export async function getSalesUserById(id: number) {
+  const [user] = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      username: users.username,
+      active: users.active,
+    })
+    .from(users)
+    .where(and(eq(users.id, id), eq(users.role, "sales")));
+
+  return user ?? null;
 }

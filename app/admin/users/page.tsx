@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { getSalesTeam } from "@/lib/reports";
 import { formatDateTime } from "@/lib/format";
+import { setSalesUserActive } from "@/lib/actions/users";
 import { CreateUserForm } from "./create-user-form";
 
 export default async function AdminUsersPage() {
@@ -40,7 +42,9 @@ export default async function AdminUsersPage() {
                 <tr className="border-b border-zinc-200 text-zinc-500">
                   <th className="p-3 font-medium">Name</th>
                   <th className="p-3 font-medium">Username</th>
+                  <th className="p-3 font-medium">Status</th>
                   <th className="p-3 font-medium">Added</th>
+                  <th className="p-3 font-medium"></th>
                 </tr>
               </thead>
               <tbody>
@@ -53,8 +57,47 @@ export default async function AdminUsersPage() {
                     <td className="p-3 text-zinc-500">
                       {member.username}
                     </td>
+                    <td className="p-3">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          member.active
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-zinc-100 text-zinc-500"
+                        }`}
+                      >
+                        {member.active ? "Active" : "Deactivated"}
+                      </span>
+                    </td>
                     <td className="p-3 text-zinc-500">
                       {formatDateTime(member.createdAt)}
+                    </td>
+                    <td className="p-3">
+                      <div className="flex items-center justify-end gap-3">
+                        <Link
+                          href={`/admin/users/${member.id}/edit`}
+                          className="text-zinc-600 hover:underline"
+                        >
+                          Edit
+                        </Link>
+                        <form
+                          action={setSalesUserActive.bind(
+                            null,
+                            member.id,
+                            !member.active
+                          )}
+                        >
+                          <button
+                            type="submit"
+                            className={
+                              member.active
+                                ? "text-red-600 hover:underline"
+                                : "text-emerald-600 hover:underline"
+                            }
+                          >
+                            {member.active ? "Deactivate" : "Reactivate"}
+                          </button>
+                        </form>
+                      </div>
                     </td>
                   </tr>
                 ))}
