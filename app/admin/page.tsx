@@ -1,0 +1,138 @@
+import Link from "next/link";
+import { getLedger, summarizeLedger } from "@/lib/reports";
+import { formatMoney, formatKg, formatDateTime } from "@/lib/format";
+
+export default async function AdminDashboardPage() {
+  const [todayRows, allRows] = await Promise.all([
+    getLedger({ period: "daily" }),
+    getLedger({ period: "all" }),
+  ]);
+
+  const today = summarizeLedger(todayRows);
+  const overall = summarizeLedger(allRows);
+  const recent = allRows.slice(0, 8);
+
+  return (
+    <div className="flex flex-col gap-8">
+      <div>
+        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
+          Dashboard
+        </h1>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          Overview of sales across the whole team.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard label="Today's Sales" value={String(today.count)} />
+        <StatCard label="Today's Revenue" value={formatMoney(today.totalAmount)} />
+        <StatCard
+          label="Today's Profit/Loss"
+          value={formatMoney(today.totalProfit)}
+          tone={today.totalProfit < 0 ? "negative" : "positive"}
+        />
+        <StatCard label="Total Weight Sold (all-time)" value={formatKg(overall.totalWeightKg)} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <StatCard label="All-time Revenue" value={formatMoney(overall.totalAmount)} />
+        <StatCard
+          label="All-time Profit/Loss"
+          value={formatMoney(overall.totalProfit)}
+          tone={overall.totalProfit < 0 ? "negative" : "positive"}
+        />
+        <StatCard label="All-time Sales" value={String(overall.count)} />
+      </div>
+
+      <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="flex items-center justify-between border-b border-zinc-200 p-4 dark:border-zinc-800">
+          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+            Recent Sales
+          </h2>
+          <Link
+            href="/admin/ledger"
+            className="text-sm font-medium text-zinc-600 hover:underline dark:text-zinc-400"
+          >
+            View full ledger →
+          </Link>
+        </div>
+        {recent.length === 0 ? (
+          <p className="p-4 text-sm text-zinc-500 dark:text-zinc-400">
+            No sales recorded yet.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-zinc-200 text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+                  <th className="p-3 font-medium">Date</th>
+                  <th className="p-3 font-medium">Sales Person</th>
+                  <th className="p-3 font-medium">Shop</th>
+                  <th className="p-3 font-medium">Buyer</th>
+                  <th className="p-3 font-medium">Weight</th>
+                  <th className="p-3 font-medium">Amount</th>
+                  <th className="p-3 font-medium">Profit/Loss</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recent.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="border-b border-zinc-100 last:border-0 dark:border-zinc-900"
+                  >
+                    <td className="p-3 whitespace-nowrap text-zinc-500 dark:text-zinc-400">
+                      {formatDateTime(row.createdAt)}
+                    </td>
+                    <td className="p-3">{row.salesPersonName}</td>
+                    <td className="p-3">{row.shopName}</td>
+                    <td className="p-3">{row.buyerName}</td>
+                    <td className="p-3">{formatKg(row.weightKg)}</td>
+                    <td className="p-3">{formatMoney(row.totalAmount)}</td>
+                    <td
+                      className={`p-3 font-medium ${
+                        Number(row.profit) < 0
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-emerald-600 dark:text-emerald-400"
+                      }`}
+                    >
+                      {formatMoney(row.profit)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: "positive" | "negative";
+}) {
+  return (
+    <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+      <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+        {label}
+      </p>
+      <p
+        className={`mt-1 text-lg font-semibold ${
+          tone === "negative"
+            ? "text-red-600 dark:text-red-400"
+            : tone === "positive"
+              ? "text-emerald-600 dark:text-emerald-400"
+              : "text-zinc-900 dark:text-zinc-50"
+        }`}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
