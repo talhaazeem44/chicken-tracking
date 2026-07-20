@@ -16,7 +16,7 @@ export function AddStockForm() {
   return (
     <form ref={formRef} action={action} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="weightKg" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <label htmlFor="weightKg"className="text-sm font-medium text-zinc-700">
           Weight Received (kg)
         </label>
         <input
@@ -26,11 +26,11 @@ export function AddStockForm() {
           step="0.01"
           min="0.01"
           required
-          className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-900"
+          className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500"
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="costPerKg" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <label htmlFor="costPerKg"className="text-sm font-medium text-zinc-700">
           Cost per kg (Rs)
         </label>
         <input
@@ -40,29 +40,29 @@ export function AddStockForm() {
           step="0.01"
           min="0"
           required
-          className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-900"
+          className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500"
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="note" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <label htmlFor="note"className="text-sm font-medium text-zinc-700">
           Note (optional)
         </label>
         <input
           id="note"
           name="note"
-          className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-900"
+          className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500"
         />
       </div>
       {state?.error && (
-        <p className="text-sm text-red-600 dark:text-red-400">{state.error}</p>
+        <p className="text-sm text-red-600">{state.error}</p>
       )}
       {state?.success && (
-        <p className="text-sm text-emerald-600 dark:text-emerald-400">{state.success}</p>
+        <p className="text-sm text-emerald-600">{state.success}</p>
       )}
       <button
         type="submit"
         disabled={pending}
-        className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+        className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50"
       >
         {pending ? "Adding..." : "Add Stock"}
       </button>
