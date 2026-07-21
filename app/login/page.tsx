@@ -9,7 +9,7 @@ export default function LoginPage() {
             🐔
           </span>
           <h1 className="text-xl font-semibold text-zinc-900">
-            Poultry Chicken
+            Prime Poultry
           </h1>
           <p className="text-sm text-zinc-500">Sign in to your dashboard</p>
         </div>

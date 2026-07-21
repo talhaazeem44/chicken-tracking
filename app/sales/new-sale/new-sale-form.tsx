@@ -9,7 +9,7 @@ export function NewSaleForm({ balanceKg }: { balanceKg: number }) {
   return (
     <form action={action} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="shopName"className="text-sm font-medium text-zinc-700">
+        <label htmlFor="shopName" className="text-sm font-medium text-zinc-700">
           Shop Name
         </label>
         <input
@@ -20,7 +20,7 @@ export function NewSaleForm({ balanceKg }: { balanceKg: number }) {
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="buyerName"className="text-sm font-medium text-zinc-700">
+        <label htmlFor="buyerName" className="text-sm font-medium text-zinc-700">
           Buyer Name
         </label>
         <input
@@ -31,7 +31,7 @@ export function NewSaleForm({ balanceKg }: { balanceKg: number }) {
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="weightKg"className="text-sm font-medium text-zinc-700">
+        <label htmlFor="weightKg" className="text-sm font-medium text-zinc-700">
           Weight Sold (kg)
         </label>
         <input
@@ -49,7 +49,7 @@ export function NewSaleForm({ balanceKg }: { balanceKg: number }) {
         </p>
       </div>
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="totalAmount"className="text-sm font-medium text-zinc-700">
+        <label htmlFor="totalAmount" className="text-sm font-medium text-zinc-700">
           Total Bill (Rs)
         </label>
         <input

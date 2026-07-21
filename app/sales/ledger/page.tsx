@@ -26,13 +26,21 @@ export default async function SalesLedgerPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold text-zinc-900">
-          My Sales
-        </h1>
-        <p className="text-sm text-zinc-500">
-          Your sales history and totals.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-zinc-900">
+            My Sales
+          </h1>
+          <p className="text-sm text-zinc-500">
+            Your sales history and totals.
+          </p>
+        </div>
+        <a
+          href={`/sales/ledger/export?period=${period}`}
+          className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
+        >
+          Export to Excel
+        </a>
       </div>
 
       <form className="flex flex-wrap items-end gap-4 rounded-xl border border-zinc-200 bg-white p-4">
