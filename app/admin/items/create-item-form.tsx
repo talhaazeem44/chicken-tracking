@@ -1,58 +1,55 @@
 "use client";
 
-import { useActionState } from "react";
-import { updateSalesUser } from "@/lib/actions/users";
+import { useActionState, useRef, useEffect } from "react";
+import { createItem } from "@/lib/actions/items";
 
-export function EditUserForm({
-  userId,
-  defaultName,
-  defaultUsername,
-}: {
-  userId: string;
-  defaultName: string;
-  defaultUsername: string;
-}) {
-  const [state, action, pending] = useActionState(
-    updateSalesUser.bind(null, userId),
-    undefined
-  );
+export function CreateItemForm() {
+  const [state, action, pending] = useActionState(createItem, undefined);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (state?.success) {
+      formRef.current?.reset();
+    }
+  }, [state]);
 
   return (
-    <form action={action} className="flex flex-col gap-4">
+    <form ref={formRef} action={action} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
         <label htmlFor="name" className="text-sm font-medium text-zinc-700">
-          Full Name
+          Item Name
         </label>
         <input
           id="name"
           name="name"
           required
-          defaultValue={defaultName}
+          placeholder="e.g. Whole Chicken"
           className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500"
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="username" className="text-sm font-medium text-zinc-700">
-          Username
+        <label htmlFor="description" className="text-sm font-medium text-zinc-700">
+          Description (optional)
+        </label>
+        <textarea
+          id="description"
+          name="description"
+          rows={2}
+          placeholder="e.g. Fresh whole chicken, cleaned"
+          className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500"
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="rate" className="text-sm font-medium text-zinc-700">
+          Rate (Rs/kg)
         </label>
         <input
-          id="username"
-          name="username"
+          id="rate"
+          name="rate"
+          type="number"
+          step="0.01"
+          min="0"
           required
-          defaultValue={defaultUsername}
-          className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500"
-        />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="password" className="text-sm font-medium text-zinc-700">
-          New Password
-        </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          minLength={6}
-          placeholder="Leave blank to keep current password"
           className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500"
         />
       </div>
@@ -65,7 +62,7 @@ export function EditUserForm({
         disabled={pending}
         className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50"
       >
-        {pending ? "Saving..." : "Save Changes"}
+        {pending ? "Adding..." : "Add Item"}
       </button>
     </form>
   );

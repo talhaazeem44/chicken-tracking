@@ -5,8 +5,10 @@ import { Brand } from "@/components/brand";
 
 const links = [
   { href: "/admin", label: "Dashboard" },
+  { href: "/admin/approvals", label: "Approvals" },
   { href: "/admin/users", label: "Sales Team" },
   { href: "/admin/ledger", label: "Ledger & Reports" },
+  { href: "/admin/items", label: "Items" },
 ];
 
 export default async function AdminLayout({

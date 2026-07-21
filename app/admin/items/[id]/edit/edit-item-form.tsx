@@ -1,19 +1,21 @@
 "use client";
 
 import { useActionState } from "react";
-import { updateSalesUser } from "@/lib/actions/users";
+import { updateItem } from "@/lib/actions/items";
 
-export function EditUserForm({
-  userId,
+export function EditItemForm({
+  itemId,
   defaultName,
-  defaultUsername,
+  defaultDescription,
+  defaultRate,
 }: {
-  userId: string;
+  itemId: string;
   defaultName: string;
-  defaultUsername: string;
+  defaultDescription: string;
+  defaultRate: number;
 }) {
   const [state, action, pending] = useActionState(
-    updateSalesUser.bind(null, userId),
+    updateItem.bind(null, itemId),
     undefined
   );
 
@@ -21,7 +23,7 @@ export function EditUserForm({
     <form action={action} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
         <label htmlFor="name" className="text-sm font-medium text-zinc-700">
-          Full Name
+          Item Name
         </label>
         <input
           id="name"
@@ -32,27 +34,29 @@ export function EditUserForm({
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="username" className="text-sm font-medium text-zinc-700">
-          Username
+        <label htmlFor="description" className="text-sm font-medium text-zinc-700">
+          Description (optional)
         </label>
-        <input
-          id="username"
-          name="username"
-          required
-          defaultValue={defaultUsername}
+        <textarea
+          id="description"
+          name="description"
+          rows={2}
+          defaultValue={defaultDescription}
           className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500"
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="password" className="text-sm font-medium text-zinc-700">
-          New Password
+        <label htmlFor="rate" className="text-sm font-medium text-zinc-700">
+          Rate (Rs/kg)
         </label>
         <input
-          id="password"
-          name="password"
-          type="password"
-          minLength={6}
-          placeholder="Leave blank to keep current password"
+          id="rate"
+          name="rate"
+          type="number"
+          step="0.01"
+          min="0"
+          required
+          defaultValue={defaultRate}
           className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500"
         />
       </div>

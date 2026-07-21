@@ -1,7 +1,8 @@
 import "server-only";
-import { and, desc, eq, gte } from "drizzle-orm";
-import { db } from "@/lib/db";
-import { sales, users } from "@/lib/db/schema";
+import mongoose from "mongoose";
+import { connectDB } from "@/lib/db";
+import { UserModel, SaleModel } from "@/lib/db/models";
+import type { SaleStatus } from "@/lib/db/models";
 
 export type LedgerPeriod = "daily" | "weekly" | "monthly" | "all";
 
@@ -21,56 +22,112 @@ export function periodStartDate(period: LedgerPeriod): Date | null {
   return null;
 }
 
-export type LedgerRow = {
-  id: number;
+type SaleLineDoc = {
+  itemId: unknown;
+  itemName: string;
+  weightKg: number;
+  ratePerKg: number;
+  amount: number;
+  costPerKgAtSale: number;
+  profit: number;
+};
+
+type SaleDoc = {
+  _id: unknown;
+  salesPersonId: { _id: unknown; name: string } | unknown;
   shopName: string;
   buyerName: string;
-  weightKg: string;
-  ratePerKg: string;
-  totalAmount: string;
-  costPerKgAtSale: string;
-  profit: string;
+  lines: SaleLineDoc[];
+  totalAmount: number;
+  totalProfit: number;
+  status: SaleStatus;
+  rejectionReason?: string;
+  createdAt: Date;
+};
+
+// One row per bill (not per line): a bill can cover several items, so
+// weight/rate/cost are aggregated across its lines for ledger display.
+export type LedgerRow = {
+  id: string;
+  itemsSummary: string;
+  shopName: string;
+  buyerName: string;
+  weightKg: number;
+  ratePerKg: number;
+  totalAmount: number;
+  costPerKgAtSale: number;
+  profit: number;
   createdAt: Date;
   salesPersonName: string;
+  status: SaleStatus;
+  rejectionReason?: string;
 };
+
+function salesPersonName(doc: SaleDoc): string {
+  const person = doc.salesPersonId as { name?: string } | null;
+  return person?.name ?? "Unknown";
+}
+
+function toLedgerRow(doc: SaleDoc): LedgerRow {
+  const weightKg = doc.lines.reduce((sum, line) => sum + line.weightKg, 0);
+  const itemsSummary = doc.lines
+    .map((line) => `${line.itemName} (${line.weightKg}kg)`)
+    .join(", ");
+  const costWeighted = doc.lines.reduce(
+    (sum, line) => sum + line.costPerKgAtSale * line.weightKg,
+    0
+  );
+
+  return {
+    id: String(doc._id),
+    itemsSummary,
+    shopName: doc.shopName,
+    buyerName: doc.buyerName,
+    weightKg,
+    ratePerKg: weightKg > 0 ? doc.totalAmount / weightKg : 0,
+    totalAmount: doc.totalAmount,
+    costPerKgAtSale: weightKg > 0 ? costWeighted / weightKg : 0,
+    profit: doc.totalProfit,
+    createdAt: doc.createdAt,
+    salesPersonName: salesPersonName(doc),
+    status: doc.status,
+    rejectionReason: doc.rejectionReason,
+  };
+}
 
 export async function getLedger({
   period = "all",
   salesPersonId,
+  status = "approved",
 }: {
   period?: LedgerPeriod;
-  salesPersonId?: number;
+  salesPersonId?: string;
+  status?: SaleStatus | "all";
 }): Promise<LedgerRow[]> {
-  const start = periodStartDate(period);
-  const conditions = [];
-  if (start) conditions.push(gte(sales.createdAt, start));
-  if (salesPersonId) conditions.push(eq(sales.salesPersonId, salesPersonId));
+  await connectDB();
 
-  return db
-    .select({
-      id: sales.id,
-      shopName: sales.shopName,
-      buyerName: sales.buyerName,
-      weightKg: sales.weightKg,
-      ratePerKg: sales.ratePerKg,
-      totalAmount: sales.totalAmount,
-      costPerKgAtSale: sales.costPerKgAtSale,
-      profit: sales.profit,
-      createdAt: sales.createdAt,
-      salesPersonName: users.name,
-    })
-    .from(sales)
-    .innerJoin(users, eq(sales.salesPersonId, users.id))
-    .where(conditions.length ? and(...conditions) : undefined)
-    .orderBy(desc(sales.createdAt));
+  const match: Record<string, unknown> = {};
+  const start = periodStartDate(period);
+  if (start) match.createdAt = { $gte: start };
+  if (salesPersonId) {
+    match.salesPersonId = new mongoose.Types.ObjectId(salesPersonId);
+  }
+  if (status !== "all") match.status = status;
+
+  const docs = await SaleModel.find(match)
+    .sort({ createdAt: -1 })
+    .populate("salesPersonId", "name")
+    .lean<SaleDoc[]>();
+
+  return docs.map(toLedgerRow);
 }
 
 export function summarizeLedger(rows: LedgerRow[]) {
   return rows.reduce(
     (acc, row) => {
-      acc.totalWeightKg += Number(row.weightKg);
-      acc.totalAmount += Number(row.totalAmount);
-      acc.totalProfit += Number(row.profit);
+      acc.totalWeightKg += row.weightKg;
+      acc.totalAmount += row.totalAmount;
+      acc.totalProfit += row.profit;
       acc.count += 1;
       return acc;
     },
@@ -78,52 +135,114 @@ export function summarizeLedger(rows: LedgerRow[]) {
   );
 }
 
-export async function getSaleById(id: number) {
-  const [row] = await db
-    .select({
-      id: sales.id,
-      shopName: sales.shopName,
-      buyerName: sales.buyerName,
-      weightKg: sales.weightKg,
-      ratePerKg: sales.ratePerKg,
-      totalAmount: sales.totalAmount,
-      costPerKgAtSale: sales.costPerKgAtSale,
-      profit: sales.profit,
-      createdAt: sales.createdAt,
-      salesPersonName: users.name,
-      salesPersonId: sales.salesPersonId,
-    })
-    .from(sales)
-    .innerJoin(users, eq(sales.salesPersonId, users.id))
-    .where(eq(sales.id, id));
+// Full itemized bill, used by the printable receipt and the admin
+// approvals queue.
+export type SaleDetail = {
+  id: string;
+  shopName: string;
+  buyerName: string;
+  lines: {
+    itemName: string;
+    weightKg: number;
+    ratePerKg: number;
+    amount: number;
+  }[];
+  totalAmount: number;
+  totalProfit: number;
+  createdAt: Date;
+  salesPersonName: string;
+  salesPersonId: string;
+  status: SaleStatus;
+  rejectionReason?: string;
+};
 
-  return row ?? null;
+function toSaleDetail(doc: SaleDoc): SaleDetail {
+  const person = doc.salesPersonId as { _id?: unknown; name?: string } | null;
+  return {
+    id: String(doc._id),
+    shopName: doc.shopName,
+    buyerName: doc.buyerName,
+    lines: doc.lines.map((line) => ({
+      itemName: line.itemName,
+      weightKg: line.weightKg,
+      ratePerKg: line.ratePerKg,
+      amount: line.amount,
+    })),
+    totalAmount: doc.totalAmount,
+    totalProfit: doc.totalProfit,
+    createdAt: doc.createdAt,
+    salesPersonName: person?.name ?? "Unknown",
+    salesPersonId: person?._id ? String(person._id) : "",
+    status: doc.status,
+    rejectionReason: doc.rejectionReason,
+  };
 }
 
-export async function getSalesTeam() {
-  return db
-    .select({
-      id: users.id,
-      name: users.name,
-      username: users.username,
-      active: users.active,
-      createdAt: users.createdAt,
-    })
-    .from(users)
-    .where(eq(users.role, "sales"))
-    .orderBy(desc(users.createdAt));
+export async function getSaleById(id: string): Promise<SaleDetail | null> {
+  await connectDB();
+  if (!mongoose.isValidObjectId(id)) return null;
+
+  const doc = await SaleModel.findById(id)
+    .populate("salesPersonId", "name")
+    .lean<SaleDoc | null>();
+
+  return doc ? toSaleDetail(doc) : null;
 }
 
-export async function getSalesUserById(id: number) {
-  const [user] = await db
-    .select({
-      id: users.id,
-      name: users.name,
-      username: users.username,
-      active: users.active,
-    })
-    .from(users)
-    .where(and(eq(users.id, id), eq(users.role, "sales")));
+export async function getPendingSales(): Promise<SaleDetail[]> {
+  await connectDB();
 
-  return user ?? null;
+  const docs = await SaleModel.find({ status: "pending" })
+    .sort({ createdAt: 1 })
+    .populate("salesPersonId", "name")
+    .lean<SaleDoc[]>();
+
+  return docs.map(toSaleDetail);
+}
+
+export type SalesTeamMember = {
+  id: string;
+  name: string;
+  username: string;
+  active: boolean;
+  createdAt: Date;
+};
+
+export async function getSalesTeam(): Promise<SalesTeamMember[]> {
+  await connectDB();
+
+  const docs = await UserModel.find({ role: "sales" })
+    .sort({ createdAt: -1 })
+    .lean<
+      { _id: unknown; name: string; username: string; active: boolean; createdAt: Date }[]
+    >();
+
+  return docs.map((u) => ({
+    id: String(u._id),
+    name: u.name,
+    username: u.username,
+    active: u.active,
+    createdAt: u.createdAt,
+  }));
+}
+
+export async function getSalesUserById(id: string) {
+  await connectDB();
+  if (!mongoose.isValidObjectId(id)) return null;
+
+  const user = await UserModel.findOne({ _id: id, role: "sales" }).lean<{
+    _id: unknown;
+    name: string;
+    username: string;
+    active: boolean;
+  } | null>();
+
+  if (!user) return null;
+
+  return {
+    id: String(user._id),
+    name: user.name,
+    username: user.username,
+    active: user.active,
+  };
 }

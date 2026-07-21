@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { getLedger, summarizeLedger } from "@/lib/reports";
+import { getLedger, getPendingSales, summarizeLedger } from "@/lib/reports";
 import { formatMoney, formatKg, formatDateTime } from "@/lib/format";
 
 export default async function AdminDashboardPage() {
-  const [todayRows, allRows] = await Promise.all([
+  const [todayRows, allRows, pending] = await Promise.all([
     getLedger({ period: "daily" }),
     getLedger({ period: "all" }),
+    getPendingSales(),
   ]);
 
   const today = summarizeLedger(todayRows);
@@ -24,6 +25,13 @@ export default async function AdminDashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Link href="/admin/approvals" className="block">
+          <StatCard
+            label="Pending Approvals"
+            value={String(pending.length)}
+            tone={pending.length > 0 ? "negative" : undefined}
+          />
+        </Link>
         <StatCard label="Today's Sales" value={String(today.count)} />
         <StatCard label="Today's Revenue" value={formatMoney(today.totalAmount)} />
         <StatCard
@@ -31,10 +39,9 @@ export default async function AdminDashboardPage() {
           value={formatMoney(today.totalProfit)}
           tone={today.totalProfit < 0 ? "negative" : "positive"}
         />
-        <StatCard label="Total Weight Sold (all-time)" value={formatKg(overall.totalWeightKg)} />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
         <StatCard label="All-time Revenue" value={formatMoney(overall.totalAmount)} />
         <StatCard
           label="All-time Profit/Loss"
@@ -42,6 +49,7 @@ export default async function AdminDashboardPage() {
           tone={overall.totalProfit < 0 ? "negative" : "positive"}
         />
         <StatCard label="All-time Sales" value={String(overall.count)} />
+        <StatCard label="Total Weight Sold (all-time)" value={formatKg(overall.totalWeightKg)} />
       </div>
 
       <div className="rounded-xl border border-zinc-200 bg-white">
@@ -67,6 +75,7 @@ export default async function AdminDashboardPage() {
                 <tr className="border-b border-zinc-200 text-zinc-500">
                   <th className="p-3 font-medium">Date</th>
                   <th className="p-3 font-medium">Sales Person</th>
+                  <th className="p-3 font-medium">Items</th>
                   <th className="p-3 font-medium">Shop</th>
                   <th className="p-3 font-medium">Buyer</th>
                   <th className="p-3 font-medium">Weight</th>
@@ -84,15 +93,14 @@ export default async function AdminDashboardPage() {
                       {formatDateTime(row.createdAt)}
                     </td>
                     <td className="p-3">{row.salesPersonName}</td>
+                    <td className="p-3">{row.itemsSummary}</td>
                     <td className="p-3">{row.shopName}</td>
                     <td className="p-3">{row.buyerName}</td>
                     <td className="p-3">{formatKg(row.weightKg)}</td>
                     <td className="p-3">{formatMoney(row.totalAmount)}</td>
                     <td
                       className={`p-3 font-medium ${
-                        Number(row.profit) < 0
-                          ? "text-red-600"
-                          : "text-emerald-600"
+                        row.profit < 0 ? "text-red-600" : "text-emerald-600"
                       }`}
                     >
                       {formatMoney(row.profit)}

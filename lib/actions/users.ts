@@ -1,12 +1,11 @@
 "use server";
 
 import * as z from "zod";
-import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/dal";
-import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { connectDB } from "@/lib/db";
+import { UserModel } from "@/lib/db/models";
 
 const CreateSalesUserSchema = z.object({
   name: z.string().trim().min(2, { error: "Name must be at least 2 characters." }),
@@ -32,6 +31,7 @@ export async function createSalesUser(
   formData: FormData
 ): Promise<CreateSalesUserState> {
   await requireRole("admin");
+  await connectDB();
 
   const validated = CreateSalesUserSchema.safeParse({
     name: formData.get("name"),
@@ -45,18 +45,14 @@ export async function createSalesUser(
 
   const { name, username, password } = validated.data;
 
-  const [existing] = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.username, username));
-
+  const existing = await UserModel.findOne({ username }).lean();
   if (existing) {
     return { error: "That username is already taken." };
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  await db.insert(users).values({
+  await UserModel.create({
     name,
     username,
     passwordHash,
@@ -89,11 +85,12 @@ export type UpdateSalesUserState =
   | undefined;
 
 export async function updateSalesUser(
-  userId: number,
+  userId: string,
   _prevState: UpdateSalesUserState,
   formData: FormData
 ): Promise<UpdateSalesUserState> {
   await requireRole("admin");
+  await connectDB();
 
   const validated = UpdateSalesUserSchema.safeParse({
     name: formData.get("name"),
@@ -107,35 +104,26 @@ export async function updateSalesUser(
 
   const { name, username, password } = validated.data;
 
-  const [existing] = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.username, username));
-
-  if (existing && existing.id !== userId) {
+  const existing = await UserModel.findOne({ username }).lean<{ _id: unknown }>();
+  if (existing && String(existing._id) !== userId) {
     return { error: "That username is already taken." };
   }
 
-  await db
-    .update(users)
-    .set({
-      name,
-      username,
-      ...(password ? { passwordHash: await bcrypt.hash(password, 10) } : {}),
-    })
-    .where(eq(users.id, userId));
+  await UserModel.findByIdAndUpdate(userId, {
+    name,
+    username,
+    ...(password ? { passwordHash: await bcrypt.hash(password, 10) } : {}),
+  });
 
   revalidatePath("/admin/users");
   return { success: "Account updated." };
 }
 
-export async function setSalesUserActive(userId: number, active: boolean) {
+export async function setSalesUserActive(userId: string, active: boolean) {
   await requireRole("admin");
+  await connectDB();
 
-  await db
-    .update(users)
-    .set({ active })
-    .where(eq(users.id, userId));
+  await UserModel.findByIdAndUpdate(userId, { active });
 
   revalidatePath("/admin/users");
 }

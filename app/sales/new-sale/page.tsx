@@ -1,10 +1,27 @@
 import { requireRole } from "@/lib/dal";
-import { getStockSummary } from "@/lib/inventory";
+import { getStockSummaryByItem } from "@/lib/inventory";
+import { getItems } from "@/lib/items";
 import { NewSaleForm } from "./new-sale-form";
 
 export default async function NewSalePage() {
   const session = await requireRole("sales");
-  const stock = await getStockSummary(session.userId);
+  const [stockByItem, items] = await Promise.all([
+    getStockSummaryByItem(session.userId),
+    getItems(),
+  ]);
+
+  const itemMap = new Map(items.map((item) => [item.id, item]));
+
+  // Sellable items: still active, or discontinued but with leftover stock
+  // to sell off.
+  const sellableItems = stockByItem
+    .filter((item) => item.active || item.balanceKg > 0)
+    .map((item) => ({
+      id: item.itemId,
+      name: item.itemName,
+      rate: itemMap.get(item.itemId)?.rate ?? 0,
+      balanceKg: item.balanceKg,
+    }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -13,12 +30,12 @@ export default async function NewSalePage() {
           New Sale
         </h1>
         <p className="text-sm text-zinc-500">
-          Record a sale to a shop and print the bill.
+          Add one or more items to the bill, then save and print.
         </p>
       </div>
 
-      <div className="max-w-md rounded-xl border border-zinc-200 bg-white p-6">
-        <NewSaleForm balanceKg={stock.balanceKg} />
+      <div className="max-w-lg rounded-xl border border-zinc-200 bg-white p-6">
+        <NewSaleForm items={sellableItems} />
       </div>
     </div>
   );

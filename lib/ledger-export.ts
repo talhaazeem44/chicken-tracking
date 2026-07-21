@@ -23,13 +23,15 @@ export async function buildLedgerWorkbook({
     ...(showSalesPerson
       ? [{ header: "Sales Person", key: "salesPerson", width: 18 }]
       : []),
+    { header: "Items", key: "item", width: 32 },
     { header: "Shop", key: "shop", width: 22 },
     { header: "Buyer", key: "buyer", width: 18 },
     { header: "Weight (kg)", key: "weight", width: 12 },
-    { header: "Rate/kg (Rs)", key: "rate", width: 12 },
+    { header: "Blended Rate/kg (Rs)", key: "rate", width: 16 },
     { header: "Amount (Rs)", key: "amount", width: 14 },
-    { header: "Cost/kg (Rs)", key: "cost", width: 12 },
+    { header: "Blended Cost/kg (Rs)", key: "cost", width: 16 },
     { header: "Profit/Loss (Rs)", key: "profit", width: 16 },
+    { header: "Status", key: "status", width: 12 },
   ];
   sheet.columns = columns;
 
@@ -44,13 +46,15 @@ export async function buildLedgerWorkbook({
     sheet.addRow({
       date: row.createdAt,
       salesPerson: showSalesPerson ? row.salesPersonName : undefined,
+      item: row.itemsSummary,
       shop: row.shopName,
       buyer: row.buyerName,
-      weight: Number(row.weightKg),
-      rate: Number(row.ratePerKg),
-      amount: Number(row.totalAmount),
-      cost: Number(row.costPerKgAtSale),
-      profit: Number(row.profit),
+      weight: row.weightKg,
+      rate: row.ratePerKg,
+      amount: row.totalAmount,
+      cost: row.costPerKgAtSale,
+      profit: row.profit,
+      status: row.status,
     });
   }
 

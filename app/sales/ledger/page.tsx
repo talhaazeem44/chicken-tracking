@@ -21,8 +21,12 @@ export default async function SalesLedgerPage({
     ? params.period
     : "all") as LedgerPeriod;
 
-  const rows = await getLedger({ period, salesPersonId: session.userId });
-  const summary = summarizeLedger(rows);
+  const rows = await getLedger({
+    period,
+    salesPersonId: session.userId,
+    status: "all",
+  });
+  const summary = summarizeLedger(rows.filter((row) => row.status === "approved"));
 
   return (
     <div className="flex flex-col gap-6">
@@ -85,10 +89,12 @@ export default async function SalesLedgerPage({
               <thead>
                 <tr className="border-b border-zinc-200 text-zinc-500">
                   <th className="p-3 font-medium">Date</th>
+                  <th className="p-3 font-medium">Items</th>
                   <th className="p-3 font-medium">Shop</th>
                   <th className="p-3 font-medium">Buyer</th>
                   <th className="p-3 font-medium">Weight</th>
                   <th className="p-3 font-medium">Amount</th>
+                  <th className="p-3 font-medium">Status</th>
                   <th className="p-3 font-medium"></th>
                 </tr>
               </thead>
@@ -101,10 +107,29 @@ export default async function SalesLedgerPage({
                     <td className="p-3 whitespace-nowrap text-zinc-500">
                       {formatDateTime(row.createdAt)}
                     </td>
+                    <td className="p-3">{row.itemsSummary}</td>
                     <td className="p-3">{row.shopName}</td>
                     <td className="p-3">{row.buyerName}</td>
                     <td className="p-3">{formatKg(row.weightKg)}</td>
                     <td className="p-3">{formatMoney(row.totalAmount)}</td>
+                    <td className="p-3">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          row.status === "approved"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : row.status === "rejected"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-amber-100 text-amber-700"
+                        }`}
+                      >
+                        {row.status}
+                      </span>
+                      {row.status === "rejected" && row.rejectionReason && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {row.rejectionReason}
+                        </p>
+                      )}
+                    </td>
                     <td className="p-3">
                       <Link
                         href={`/sales/receipt/${row.id}`}

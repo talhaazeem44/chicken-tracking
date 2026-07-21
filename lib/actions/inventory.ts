@@ -1,12 +1,16 @@
 "use server";
 
 import * as z from "zod";
+import mongoose from "mongoose";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/dal";
-import { db } from "@/lib/db";
-import { inventoryEntries } from "@/lib/db/schema";
+import { connectDB } from "@/lib/db";
+import { InventoryEntryModel, ItemModel } from "@/lib/db/models";
 
 const AddStockSchema = z.object({
+  itemId: z
+    .string()
+    .refine((v) => mongoose.isValidObjectId(v), { error: "Choose an item." }),
   weightKg: z.coerce
     .number({ error: "Enter the weight received." })
     .positive({ error: "Weight must be greater than 0." }),
@@ -23,8 +27,10 @@ export async function addStock(
   formData: FormData
 ): Promise<AddStockState> {
   const session = await requireRole("sales");
+  await connectDB();
 
   const validated = AddStockSchema.safeParse({
+    itemId: formData.get("itemId"),
     weightKg: formData.get("weightKg"),
     costPerKg: formData.get("costPerKg"),
     note: formData.get("note") || undefined,
@@ -34,12 +40,18 @@ export async function addStock(
     return { error: validated.error.issues[0]?.message ?? "Invalid input." };
   }
 
-  const { weightKg, costPerKg, note } = validated.data;
+  const { itemId, weightKg, costPerKg, note } = validated.data;
 
-  await db.insert(inventoryEntries).values({
+  const item = await ItemModel.findOne({ _id: itemId, active: true }).lean();
+  if (!item) {
+    return { error: "Choose a valid, active item." };
+  }
+
+  await InventoryEntryModel.create({
     salesPersonId: session.userId,
-    weightKg: weightKg.toFixed(2),
-    costPerKg: costPerKg.toFixed(2),
+    itemId,
+    weightKg,
+    costPerKg,
     note,
   });
 

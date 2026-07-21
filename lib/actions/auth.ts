@@ -1,11 +1,10 @@
 "use server";
 
 import * as z from "zod";
-import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { connectDB } from "@/lib/db";
+import { UserModel } from "@/lib/db/models";
 import { createSession, deleteSession } from "@/lib/session";
 
 const LoginSchema = z.object({
@@ -32,10 +31,14 @@ export async function login(
 
   const { username, password } = validated.data;
 
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.username, username));
+  await connectDB();
+  const user = await UserModel.findOne({ username }).lean<{
+    _id: unknown;
+    passwordHash: string;
+    active: boolean;
+    role: "admin" | "sales";
+    name: string;
+  }>();
 
   if (!user) {
     return { error: "Invalid username or password." };
@@ -50,7 +53,11 @@ export async function login(
     return { error: "This account has been deactivated. Contact your admin." };
   }
 
-  await createSession({ userId: user.id, role: user.role, name: user.name });
+  await createSession({
+    userId: String(user._id),
+    role: user.role,
+    name: user.name,
+  });
 
   redirect(user.role === "admin" ? "/admin" : "/sales");
 }

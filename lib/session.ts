@@ -1,7 +1,7 @@
 import "server-only";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import type { User } from "@/lib/db/schema";
+import type { Role } from "@/lib/db/models";
 
 const SESSION_COOKIE = "session";
 const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -17,8 +17,8 @@ function getSecretKey() {
 }
 
 export type SessionPayload = {
-  userId: number;
-  role: User["role"];
+  userId: string;
+  role: Role;
   name: string;
 };
 

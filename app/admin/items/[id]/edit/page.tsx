@@ -1,40 +1,41 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getSalesUserById } from "@/lib/reports";
-import { EditUserForm } from "./edit-user-form";
+import { getItemById } from "@/lib/items";
+import { EditItemForm } from "./edit-item-form";
 
-export default async function EditSalesUserPage({
+export default async function EditItemPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const user = await getSalesUserById(id);
+  const item = await getItemById(id);
 
-  if (!user) notFound();
+  if (!item) notFound();
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <Link
-          href="/admin/users"
+          href="/admin/items"
           className="text-sm font-medium text-zinc-600 hover:underline"
         >
-          ← Back to Sales Team
+          ← Back to Items
         </Link>
         <h1 className="mt-2 text-xl font-semibold text-zinc-900">
-          Edit {user.name}
+          Edit {item.name}
         </h1>
         <p className="text-sm text-zinc-500">
-          Update their name, username, or reset their password.
+          Update the name, description, or rate.
         </p>
       </div>
 
       <div className="max-w-md rounded-xl border border-zinc-200 bg-white p-6">
-        <EditUserForm
-          userId={user.id}
-          defaultName={user.name}
-          defaultUsername={user.username}
+        <EditItemForm
+          itemId={item.id}
+          defaultName={item.name}
+          defaultDescription={item.description}
+          defaultRate={item.rate}
         />
       </div>
     </div>

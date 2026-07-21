@@ -1,10 +1,9 @@
 import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
 import { getSession } from "@/lib/session";
-import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { connectDB } from "@/lib/db";
+import { UserModel } from "@/lib/db/models";
 
 export const verifySession = cache(async () => {
   const session = await getSession();
@@ -18,18 +17,23 @@ export const getCurrentUser = cache(async () => {
   const session = await getSession();
   if (!session?.userId) return null;
 
-  const [user] = await db
-    .select({
-      id: users.id,
-      username: users.username,
-      name: users.name,
-      role: users.role,
-      createdAt: users.createdAt,
-    })
-    .from(users)
-    .where(eq(users.id, session.userId));
+  await connectDB();
+  const user = await UserModel.findById(session.userId).lean<{
+    _id: unknown;
+    username: string;
+    name: string;
+    role: "admin" | "sales";
+    createdAt: Date;
+  }>();
+  if (!user) return null;
 
-  return user ?? null;
+  return {
+    id: String(user._id),
+    username: user.username,
+    name: user.name,
+    role: user.role,
+    createdAt: user.createdAt,
+  };
 });
 
 export async function requireRole(role: "admin" | "sales") {

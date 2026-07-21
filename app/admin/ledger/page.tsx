@@ -17,9 +17,7 @@ export default async function AdminLedgerPage({
   const period = (PERIODS.some((p) => p.value === params.period)
     ? params.period
     : "all") as LedgerPeriod;
-  const salesPersonId = params.salesPersonId
-    ? Number(params.salesPersonId)
-    : undefined;
+  const salesPersonId = params.salesPersonId || undefined;
 
   const [rows, team] = await Promise.all([
     getLedger({ period, salesPersonId }),
@@ -28,7 +26,7 @@ export default async function AdminLedgerPage({
   const summary = summarizeLedger(rows);
 
   const exportParams = new URLSearchParams({ period });
-  if (salesPersonId) exportParams.set("salesPersonId", String(salesPersonId));
+  if (salesPersonId) exportParams.set("salesPersonId", salesPersonId);
 
   return (
     <div className="flex flex-col gap-6">
@@ -72,7 +70,7 @@ export default async function AdminLedgerPage({
           </label>
           <select
             name="salesPersonId"
-            defaultValue={salesPersonId ? String(salesPersonId) : ""}
+            defaultValue={salesPersonId ?? ""}
             className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm"
           >
             <option value="">All</option>
@@ -114,6 +112,7 @@ export default async function AdminLedgerPage({
                 <tr className="border-b border-zinc-200 text-zinc-500">
                   <th className="p-3 font-medium">Date</th>
                   <th className="p-3 font-medium">Sales Person</th>
+                  <th className="p-3 font-medium">Items</th>
                   <th className="p-3 font-medium">Shop</th>
                   <th className="p-3 font-medium">Buyer</th>
                   <th className="p-3 font-medium">Weight</th>
@@ -121,6 +120,7 @@ export default async function AdminLedgerPage({
                   <th className="p-3 font-medium">Amount</th>
                   <th className="p-3 font-medium">Cost/kg</th>
                   <th className="p-3 font-medium">Profit/Loss</th>
+                  <th className="p-3 font-medium">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -133,6 +133,7 @@ export default async function AdminLedgerPage({
                       {formatDateTime(row.createdAt)}
                     </td>
                     <td className="p-3">{row.salesPersonName}</td>
+                    <td className="p-3">{row.itemsSummary}</td>
                     <td className="p-3">{row.shopName}</td>
                     <td className="p-3">{row.buyerName}</td>
                     <td className="p-3">{formatKg(row.weightKg)}</td>
@@ -141,13 +142,12 @@ export default async function AdminLedgerPage({
                     <td className="p-3">{formatMoney(row.costPerKgAtSale)}</td>
                     <td
                       className={`p-3 font-medium ${
-                        Number(row.profit) < 0
-                          ? "text-red-600"
-                          : "text-emerald-600"
+                        row.profit < 0 ? "text-red-600" : "text-emerald-600"
                       }`}
                     >
                       {formatMoney(row.profit)}
                     </td>
+                    <td className="p-3 capitalize">{row.status}</td>
                   </tr>
                 ))}
               </tbody>

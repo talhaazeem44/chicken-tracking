@@ -12,7 +12,7 @@ export default async function ReceiptPage({
 }) {
   const session = await requireRole("sales");
   const { id } = await params;
-  const sale = await getSaleById(Number(id));
+  const sale = await getSaleById(id);
 
   if (!sale) notFound();
   if (sale.salesPersonId !== session.userId) redirect("/sales");
@@ -29,6 +29,21 @@ export default async function ReceiptPage({
         <PrintButton />
       </div>
 
+      {sale.status !== "approved" && (
+        <div
+          className={`w-full max-w-md rounded-md px-4 py-2 text-sm font-medium print:hidden ${
+            sale.status === "rejected"
+              ? "bg-red-100 text-red-700"
+              : "bg-amber-100 text-amber-700"
+          }`}
+        >
+          {sale.status === "pending" &&
+            "Awaiting admin approval. It will appear in the ledger once approved."}
+          {sale.status === "rejected" &&
+            `Rejected by admin: ${sale.rejectionReason}`}
+        </div>
+      )}
+
       <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-8 print:rounded-none print:border-0 print:p-4">
         <div className="mb-6 text-center">
           <h1 className="text-lg font-bold text-zinc-900 print:text-black">
@@ -39,30 +54,38 @@ export default async function ReceiptPage({
           </p>
         </div>
 
-        <div className="mb-6 flex justify-between text-sm text-zinc-500 print:text-black">
-          <span>Bill #{sale.id}</span>
+        <div className="mb-4 flex justify-between text-sm text-zinc-500 print:text-black">
+          <span>Bill #{sale.id.slice(-6).toUpperCase()}</span>
           <span>{formatDateTime(sale.createdAt)}</span>
         </div>
 
-        <dl className="mb-6 flex flex-col gap-2 text-sm">
+        <dl className="mb-4 flex flex-col gap-2 text-sm">
           <Row label="Shop" value={sale.shopName} />
           <Row label="Buyer" value={sale.buyerName} />
           <Row label="Sold By" value={sale.salesPersonName} />
         </dl>
 
-        <div className="mb-6 border-y border-dashed border-zinc-300 py-4 text-sm print:border-black">
-          <div className="flex justify-between py-1">
-            <span className="text-zinc-500 print:text-black">Weight</span>
-            <span className="font-medium text-zinc-900 print:text-black">
-              {formatKg(sale.weightKg)}
-            </span>
-          </div>
-          <div className="flex justify-between py-1">
-            <span className="text-zinc-500 print:text-black">Rate / kg</span>
-            <span className="font-medium text-zinc-900 print:text-black">
-              {formatMoney(sale.ratePerKg)}
-            </span>
-          </div>
+        <div className="mb-4 border-y border-dashed border-zinc-300 py-2 print:border-black">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs text-zinc-500 print:text-black">
+                <th className="py-1 text-left font-medium">Item</th>
+                <th className="py-1 text-right font-medium">Kg</th>
+                <th className="py-1 text-right font-medium">Rate</th>
+                <th className="py-1 text-right font-medium">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sale.lines.map((line, index) => (
+                <tr key={index} className="text-zinc-900 print:text-black">
+                  <td className="py-1">{line.itemName}</td>
+                  <td className="py-1 text-right">{formatKg(line.weightKg)}</td>
+                  <td className="py-1 text-right">{formatMoney(line.ratePerKg)}</td>
+                  <td className="py-1 text-right">{formatMoney(line.amount)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         <div className="flex justify-between text-lg font-bold text-zinc-900 print:text-black">

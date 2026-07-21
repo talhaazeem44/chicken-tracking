@@ -13,10 +13,7 @@ export async function GET(request: NextRequest) {
   const period = (VALID_PERIODS.includes(periodParam as LedgerPeriod)
     ? periodParam
     : "all") as LedgerPeriod;
-  const salesPersonIdParam = searchParams.get("salesPersonId");
-  const salesPersonId = salesPersonIdParam
-    ? Number(salesPersonIdParam)
-    : undefined;
+  const salesPersonId = searchParams.get("salesPersonId") ?? undefined;
 
   const rows = await getLedger({ period, salesPersonId });
 
