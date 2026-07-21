@@ -72,10 +72,12 @@ export default async function SalesLedgerPage({
         </button>
       </form>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         <SummaryCard label="Sales" value={String(summary.count)} />
         <SummaryCard label="Weight Sold" value={formatKg(summary.totalWeightKg)} />
         <SummaryCard label="Revenue" value={formatMoney(summary.totalAmount)} />
+        <SummaryCard label="Received" value={formatMoney(summary.totalReceived)} />
+        <SummaryCard label="Pending" value={formatMoney(summary.totalPending)} />
       </div>
 
       <div className="rounded-xl border border-zinc-200 bg-white">
@@ -94,6 +96,7 @@ export default async function SalesLedgerPage({
                   <th className="p-3 font-medium">Buyer</th>
                   <th className="p-3 font-medium">Weight</th>
                   <th className="p-3 font-medium">Amount</th>
+                  <th className="p-3 font-medium">Pending</th>
                   <th className="p-3 font-medium">Status</th>
                   <th className="p-3 font-medium"></th>
                 </tr>
@@ -112,6 +115,15 @@ export default async function SalesLedgerPage({
                     <td className="p-3">{row.buyerName}</td>
                     <td className="p-3">{formatKg(row.weightKg)}</td>
                     <td className="p-3">{formatMoney(row.totalAmount)}</td>
+                    <td
+                      className={
+                        row.amountPending > 0
+                          ? "p-3 font-medium text-amber-600"
+                          : "p-3 text-emerald-600"
+                      }
+                    >
+                      {formatMoney(row.amountPending)}
+                    </td>
                     <td className="p-3">
                       <span
                         className={`rounded-full px-2 py-0.5 text-xs font-medium ${

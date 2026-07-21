@@ -52,6 +52,15 @@ export default async function AdminDashboardPage() {
         <StatCard label="Total Weight Sold (all-time)" value={formatKg(overall.totalWeightKg)} />
       </div>
 
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard label="All-time Received" value={formatMoney(overall.totalReceived)} />
+        <StatCard
+          label="All-time Pending"
+          value={formatMoney(overall.totalPending)}
+          tone={overall.totalPending > 0 ? "negative" : "positive"}
+        />
+      </div>
+
       <div className="rounded-xl border border-zinc-200 bg-white">
         <div className="flex items-center justify-between border-b border-zinc-200 p-4">
           <h2 className="text-sm font-semibold text-zinc-900">
@@ -80,6 +89,7 @@ export default async function AdminDashboardPage() {
                   <th className="p-3 font-medium">Buyer</th>
                   <th className="p-3 font-medium">Weight</th>
                   <th className="p-3 font-medium">Amount</th>
+                  <th className="p-3 font-medium">Pending</th>
                   <th className="p-3 font-medium">Profit/Loss</th>
                 </tr>
               </thead>
@@ -95,9 +105,25 @@ export default async function AdminDashboardPage() {
                     <td className="p-3">{row.salesPersonName}</td>
                     <td className="p-3">{row.itemsSummary}</td>
                     <td className="p-3">{row.shopName}</td>
-                    <td className="p-3">{row.buyerName}</td>
+                    <td className="p-3">
+                      <Link
+                        href={`/admin/buyers/${row.buyerId}`}
+                        className="text-zinc-900 hover:underline"
+                      >
+                        {row.buyerName}
+                      </Link>
+                    </td>
                     <td className="p-3">{formatKg(row.weightKg)}</td>
                     <td className="p-3">{formatMoney(row.totalAmount)}</td>
+                    <td
+                      className={
+                        row.amountPending > 0
+                          ? "p-3 font-medium text-amber-600"
+                          : "p-3 text-emerald-600"
+                      }
+                    >
+                      {formatMoney(row.amountPending)}
+                    </td>
                     <td
                       className={`p-3 font-medium ${
                         row.profit < 0 ? "text-red-600" : "text-emerald-600"

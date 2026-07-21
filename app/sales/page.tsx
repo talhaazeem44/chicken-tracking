@@ -46,6 +46,7 @@ export default async function SalesDashboardPage() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Today's Sales" value={String(today.count)} />
         <StatCard label="Today's Revenue" value={formatMoney(today.totalAmount)} />
+        <StatCard label="Today's Pending" value={formatMoney(today.totalPending)} />
         <StatCard label="Pending Approval" value={String(pendingRows.length)} />
       </div>
 
@@ -147,6 +148,7 @@ export default async function SalesDashboardPage() {
                   <th className="p-3 font-medium">Buyer</th>
                   <th className="p-3 font-medium">Weight</th>
                   <th className="p-3 font-medium">Amount</th>
+                  <th className="p-3 font-medium">Pending</th>
                   <th className="p-3 font-medium"></th>
                 </tr>
               </thead>
@@ -164,6 +166,15 @@ export default async function SalesDashboardPage() {
                     <td className="p-3">{row.buyerName}</td>
                     <td className="p-3">{formatKg(row.weightKg)}</td>
                     <td className="p-3">{formatMoney(row.totalAmount)}</td>
+                    <td
+                      className={
+                        row.amountPending > 0
+                          ? "p-3 font-medium text-amber-600"
+                          : "p-3 text-emerald-600"
+                      }
+                    >
+                      {formatMoney(row.amountPending)}
+                    </td>
                     <td className="p-3">
                       <Link
                         href={`/sales/receipt/${row.id}`}

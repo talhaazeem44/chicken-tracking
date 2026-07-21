@@ -49,7 +49,7 @@ export function AddStockForm({ items }: { items: PickableItem[] }) {
           step="0.01"
           min="0.01"
           required
-          className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500"
+          className="rounded-md border border-zinc-300 bg-white px-3 py-2.5 text-base outline-none focus:border-zinc-500 sm:py-2 sm:text-sm"
         />
       </div>
       <div className="flex flex-col gap-1.5">
@@ -63,7 +63,7 @@ export function AddStockForm({ items }: { items: PickableItem[] }) {
           step="0.01"
           min="0"
           required
-          className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500"
+          className="rounded-md border border-zinc-300 bg-white px-3 py-2.5 text-base outline-none focus:border-zinc-500 sm:py-2 sm:text-sm"
         />
       </div>
       <div className="flex flex-col gap-1.5">
@@ -73,7 +73,7 @@ export function AddStockForm({ items }: { items: PickableItem[] }) {
         <input
           id="note"
           name="note"
-          className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500"
+          className="rounded-md border border-zinc-300 bg-white px-3 py-2.5 text-base outline-none focus:border-zinc-500 sm:py-2 sm:text-sm"
         />
       </div>
       {state?.error && (
@@ -85,7 +85,7 @@ export function AddStockForm({ items }: { items: PickableItem[] }) {
       <button
         type="submit"
         disabled={pending || !itemId}
-        className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50"
+        className="rounded-md bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 sm:py-2"
       >
         {pending ? "Adding..." : "Add Stock"}
       </button>

@@ -1,4 +1,3 @@
-import "server-only";
 import mongoose, { Schema } from "mongoose";
 
 export type Role = "admin" | "sales";
@@ -31,6 +30,21 @@ const ItemSchema = new Schema(
     rate: { type: Number, required: true, default: 0 },
     // Deactivated items drop out of the "add stock" and "new sale" pickers,
     // but past stock/sales stay intact and attributed to them.
+    active: { type: Boolean, required: true, default: true },
+  },
+  { timestamps: { createdAt: true, updatedAt: false } }
+);
+
+// A customer admin defines, so sales staff always bill against a known
+// buyer (searched/selected, never freely typed).
+const BuyerSchema = new Schema(
+  {
+    name: { type: String, required: true },
+    shopName: { type: String, default: "" },
+    phone: { type: String, default: "" },
+    address: { type: String, default: "" },
+    // Deactivated buyers drop out of the "new sale" picker, but past sales
+    // stay intact and attributed to them in their ledger.
     active: { type: Boolean, required: true, default: true },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
@@ -71,8 +85,8 @@ const SaleLineSchema = new Schema(
 
 // A bill recorded by a sales person, covering one or more items. Starts
 // "pending" until an admin approves or rejects it; only approved bills
-// count toward ledger revenue/profit, and rejected bills free up the stock
-// they would have consumed.
+// count toward ledger revenue/profit and the buyer's ledger, and rejected
+// bills free up the stock they would have consumed.
 const SaleSchema = new Schema(
   {
     salesPersonId: {
@@ -80,11 +94,17 @@ const SaleSchema = new Schema(
       ref: "User",
       required: true,
     },
-    shopName: { type: String, required: true },
+    buyerId: { type: Schema.Types.ObjectId, ref: "Buyer", required: true },
+    // Snapshotted from the buyer record at sale time, so the bill/ledger
+    // still reads correctly even if the buyer's details change later.
     buyerName: { type: String, required: true },
+    shopName: { type: String, default: "" },
     lines: { type: [SaleLineSchema], required: true },
     totalAmount: { type: Number, required: true },
     totalProfit: { type: Number, required: true },
+    // How much of totalAmount was paid at sale time; the rest is
+    // outstanding and tracked on the buyer's ledger.
+    amountReceived: { type: Number, required: true },
     status: {
       type: String,
       enum: ["pending", "approved", "rejected"],
@@ -104,6 +124,7 @@ function getModel<T>(name: string, schema: Schema): mongoose.Model<T> {
 
 export const UserModel = getModel("User", UserSchema);
 export const ItemModel = getModel("Item", ItemSchema);
+export const BuyerModel = getModel("Buyer", BuyerSchema);
 export const InventoryEntryModel = getModel(
   "InventoryEntry",
   InventoryEntrySchema

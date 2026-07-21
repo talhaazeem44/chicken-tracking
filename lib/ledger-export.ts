@@ -29,6 +29,8 @@ export async function buildLedgerWorkbook({
     { header: "Weight (kg)", key: "weight", width: 12 },
     { header: "Blended Rate/kg (Rs)", key: "rate", width: 16 },
     { header: "Amount (Rs)", key: "amount", width: 14 },
+    { header: "Received (Rs)", key: "received", width: 14 },
+    { header: "Pending (Rs)", key: "pending", width: 14 },
     { header: "Blended Cost/kg (Rs)", key: "cost", width: 16 },
     { header: "Profit/Loss (Rs)", key: "profit", width: 16 },
     { header: "Status", key: "status", width: 12 },
@@ -52,6 +54,8 @@ export async function buildLedgerWorkbook({
       weight: row.weightKg,
       rate: row.ratePerKg,
       amount: row.totalAmount,
+      received: row.amountReceived,
+      pending: row.amountPending,
       cost: row.costPerKgAtSale,
       profit: row.profit,
       status: row.status,
@@ -59,7 +63,7 @@ export async function buildLedgerWorkbook({
   }
 
   sheet.getColumn("date").numFmt = "dd-mmm-yyyy hh:mm";
-  for (const key of ["weight", "rate", "amount", "cost", "profit"]) {
+  for (const key of ["weight", "rate", "amount", "received", "pending", "cost", "profit"]) {
     const col = sheet.getColumn(key);
     col.numFmt = "#,##0.00";
   }
@@ -70,6 +74,8 @@ export async function buildLedgerWorkbook({
     shop: "TOTAL",
     weight: summary.totalWeightKg,
     amount: summary.totalAmount,
+    received: summary.totalReceived,
+    pending: summary.totalPending,
     profit: summary.totalProfit,
   });
   totalsRow.font = { bold: true };

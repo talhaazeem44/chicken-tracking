@@ -93,6 +93,25 @@ export default async function ReceiptPage({
           <span>{formatMoney(sale.totalAmount)}</span>
         </div>
 
+        <div className="mt-2 flex flex-col gap-1 text-sm print:text-black">
+          <div className="flex justify-between">
+            <span className="text-zinc-500 print:text-black">Received</span>
+            <span className="font-medium text-zinc-900 print:text-black">
+              {formatMoney(sale.amountReceived)}
+            </span>
+          </div>
+          {sale.amountPending > 0 && (
+            <div className="flex justify-between">
+              <span className="text-zinc-500 print:text-black">
+                Balance Due
+              </span>
+              <span className="font-medium text-red-600 print:text-black">
+                {formatMoney(sale.amountPending)}
+              </span>
+            </div>
+          )}
+        </div>
+
         <p className="mt-8 text-center text-xs text-zinc-400 print:text-black">
           Thank you for your business.
         </p>

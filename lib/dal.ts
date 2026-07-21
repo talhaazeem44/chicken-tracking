@@ -1,4 +1,5 @@
 import "server-only";
+import mongoose from "mongoose";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
@@ -7,7 +8,11 @@ import { UserModel } from "@/lib/db/models";
 
 export const verifySession = cache(async () => {
   const session = await getSession();
-  if (!session?.userId) {
+  // A session predating this app's move to MongoDB (or one whose account
+  // was since deleted) carries a userId that isn't a valid ObjectId. Send
+  // them back to log in instead of crashing every query that touches it;
+  // logging in overwrites the stale cookie with a fresh one.
+  if (!session?.userId || !mongoose.isValidObjectId(session.userId)) {
     redirect("/login");
   }
   return session;
@@ -15,7 +20,7 @@ export const verifySession = cache(async () => {
 
 export const getCurrentUser = cache(async () => {
   const session = await getSession();
-  if (!session?.userId) return null;
+  if (!session?.userId || !mongoose.isValidObjectId(session.userId)) return null;
 
   await connectDB();
   const user = await UserModel.findById(session.userId).lean<{

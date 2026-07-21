@@ -33,6 +33,7 @@ export default async function AdminItemsPage() {
           {allItems.length === 0 ? (
             <p className="p-4 text-sm text-zinc-500">No items yet.</p>
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-zinc-200 text-zinc-500">
@@ -104,6 +105,7 @@ export default async function AdminItemsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>

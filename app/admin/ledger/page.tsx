@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { getLedger, getSalesTeam, summarizeLedger, type LedgerPeriod } from "@/lib/reports";
+import { getBuyers } from "@/lib/buyers";
 import { formatMoney, formatKg, formatDateTime } from "@/lib/format";
 
 const PERIODS: { value: LedgerPeriod; label: string }[] = [
@@ -11,22 +13,29 @@ const PERIODS: { value: LedgerPeriod; label: string }[] = [
 export default async function AdminLedgerPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; salesPersonId?: string }>;
+  searchParams: Promise<{
+    period?: string;
+    salesPersonId?: string;
+    buyerId?: string;
+  }>;
 }) {
   const params = await searchParams;
   const period = (PERIODS.some((p) => p.value === params.period)
     ? params.period
     : "all") as LedgerPeriod;
   const salesPersonId = params.salesPersonId || undefined;
+  const buyerId = params.buyerId || undefined;
 
-  const [rows, team] = await Promise.all([
-    getLedger({ period, salesPersonId }),
+  const [rows, team, buyers] = await Promise.all([
+    getLedger({ period, salesPersonId, buyerId }),
     getSalesTeam(),
+    getBuyers(),
   ]);
   const summary = summarizeLedger(rows);
 
   const exportParams = new URLSearchParams({ period });
   if (salesPersonId) exportParams.set("salesPersonId", salesPersonId);
+  if (buyerId) exportParams.set("buyerId", buyerId);
 
   return (
     <div className="flex flex-col gap-6">
@@ -81,6 +90,21 @@ export default async function AdminLedgerPage({
             ))}
           </select>
         </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium text-zinc-500">Buyer</label>
+          <select
+            name="buyerId"
+            defaultValue={buyerId ?? ""}
+            className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm"
+          >
+            <option value="">All</option>
+            {buyers.map((buyer) => (
+              <option key={buyer.id} value={buyer.id}>
+                {buyer.name}
+              </option>
+            ))}
+          </select>
+        </div>
         <button
           type="submit"
           className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
@@ -97,6 +121,14 @@ export default async function AdminLedgerPage({
           label="Profit/Loss"
           value={formatMoney(summary.totalProfit)}
           tone={summary.totalProfit < 0 ? "negative" : "positive"}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <SummaryCard label="Received" value={formatMoney(summary.totalReceived)} />
+        <SummaryCard
+          label="Pending"
+          value={formatMoney(summary.totalPending)}
+          tone={summary.totalPending > 0 ? "negative" : "positive"}
         />
       </div>
 
@@ -118,6 +150,8 @@ export default async function AdminLedgerPage({
                   <th className="p-3 font-medium">Weight</th>
                   <th className="p-3 font-medium">Rate/kg</th>
                   <th className="p-3 font-medium">Amount</th>
+                  <th className="p-3 font-medium">Received</th>
+                  <th className="p-3 font-medium">Pending</th>
                   <th className="p-3 font-medium">Cost/kg</th>
                   <th className="p-3 font-medium">Profit/Loss</th>
                   <th className="p-3 font-medium">Status</th>
@@ -135,10 +169,27 @@ export default async function AdminLedgerPage({
                     <td className="p-3">{row.salesPersonName}</td>
                     <td className="p-3">{row.itemsSummary}</td>
                     <td className="p-3">{row.shopName}</td>
-                    <td className="p-3">{row.buyerName}</td>
+                    <td className="p-3">
+                      <Link
+                        href={`/admin/buyers/${row.buyerId}`}
+                        className="text-zinc-900 hover:underline"
+                      >
+                        {row.buyerName}
+                      </Link>
+                    </td>
                     <td className="p-3">{formatKg(row.weightKg)}</td>
                     <td className="p-3">{formatMoney(row.ratePerKg)}</td>
                     <td className="p-3">{formatMoney(row.totalAmount)}</td>
+                    <td className="p-3">{formatMoney(row.amountReceived)}</td>
+                    <td
+                      className={
+                        row.amountPending > 0
+                          ? "p-3 font-medium text-amber-600"
+                          : "p-3 text-emerald-600"
+                      }
+                    >
+                      {formatMoney(row.amountPending)}
+                    </td>
                     <td className="p-3">{formatMoney(row.costPerKgAtSale)}</td>
                     <td
                       className={`p-3 font-medium ${

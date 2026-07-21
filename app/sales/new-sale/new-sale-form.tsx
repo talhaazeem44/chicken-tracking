@@ -6,6 +6,7 @@ import { ItemPicker } from "@/components/item-picker";
 import { formatMoney } from "@/lib/format";
 
 type SellableItem = { id: string; name: string; rate: number; balanceKg: number };
+type PickableBuyer = { id: string; name: string };
 type CartLine = {
   itemId: string;
   itemName: string;
@@ -13,14 +14,28 @@ type CartLine = {
   ratePerKg: number;
 };
 
-export function NewSaleForm({ items }: { items: SellableItem[] }) {
+const inputClass =
+  "rounded-md border border-zinc-300 bg-white px-3 py-2.5 text-base outline-none focus:border-zinc-500 disabled:bg-zinc-100 disabled:text-zinc-400 sm:py-2 sm:text-sm";
+
+export function NewSaleForm({
+  items,
+  buyers,
+}: {
+  items: SellableItem[];
+  buyers: PickableBuyer[];
+}) {
   const [state, action, pending] = useActionState(createSale, undefined);
+
+  const [buyerId, setBuyerId] = useState<string | null>(null);
 
   const [itemId, setItemId] = useState<string | null>(null);
   const [weightInput, setWeightInput] = useState("");
   const [rateInput, setRateInput] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [lineError, setLineError] = useState<string | null>(null);
+
+  const [fullyPaid, setFullyPaid] = useState(true);
+  const [amountReceivedInput, setAmountReceivedInput] = useState("");
 
   const selectedItem = items.find((item) => item.id === itemId) ?? null;
 
@@ -88,36 +103,35 @@ export function NewSaleForm({ items }: { items: SellableItem[] }) {
     (sum, line) => sum + line.weightKg * line.ratePerKg,
     0
   );
+  const amountReceived = fullyPaid
+    ? grandTotal
+    : Math.max(0, Number(amountReceivedInput) || 0);
+  const amountPending = Math.max(0, grandTotal - amountReceived);
+  const receivedTooHigh = !fullyPaid && amountReceived > grandTotal;
 
   return (
-    <form action={action} className="flex flex-col gap-4">
+    <form action={action} className="flex flex-col gap-5">
       <input type="hidden" name="lines" value={JSON.stringify(cart)} />
+      <input type="hidden" name="amountReceived" value={amountReceived} />
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="shopName" className="text-sm font-medium text-zinc-700">
-          Shop Name
-        </label>
-        <input
-          id="shopName"
-          name="shopName"
-          required
-          className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500"
+        <label className="text-sm font-medium text-zinc-700">Buyer</label>
+        <ItemPicker
+          items={buyers}
+          name="buyerId"
+          value={buyerId}
+          onChange={setBuyerId}
+          placeholder="Search for a buyer..."
         />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="buyerName" className="text-sm font-medium text-zinc-700">
-          Buyer Name
-        </label>
-        <input
-          id="buyerName"
-          name="buyerName"
-          required
-          className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500"
-        />
+        {buyers.length === 0 && (
+          <p className="text-xs text-amber-600">
+            No buyers available yet. Ask an admin to add one.
+          </p>
+        )}
       </div>
 
-      <div className="rounded-md border border-zinc-200 p-3">
-        <p className="mb-2 text-sm font-medium text-zinc-700">Add Item</p>
+      <div className="rounded-lg border border-zinc-200 p-3 sm:p-4">
+        <p className="mb-3 text-sm font-medium text-zinc-700">Add Item</p>
         <div className="flex flex-col gap-2">
           <ItemPicker
             items={items}
@@ -126,7 +140,7 @@ export function NewSaleForm({ items }: { items: SellableItem[] }) {
             onChange={handleItemChange}
             placeholder="Search for an item..."
           />
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <input
               type="number"
               step="0.01"
@@ -135,7 +149,7 @@ export function NewSaleForm({ items }: { items: SellableItem[] }) {
               value={weightInput}
               onChange={(event) => setWeightInput(event.target.value)}
               disabled={!selectedItem}
-              className="w-1/2 rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500 disabled:bg-zinc-100"
+              className={inputClass}
             />
             <input
               type="number"
@@ -145,7 +159,7 @@ export function NewSaleForm({ items }: { items: SellableItem[] }) {
               value={rateInput}
               onChange={(event) => setRateInput(event.target.value)}
               disabled={!selectedItem}
-              className="w-1/2 rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500 disabled:bg-zinc-100"
+              className={inputClass}
             />
           </div>
           {selectedItem && (
@@ -158,9 +172,9 @@ export function NewSaleForm({ items }: { items: SellableItem[] }) {
             type="button"
             onClick={handleAddLine}
             disabled={!selectedItem}
-            className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:opacity-50"
+            className="rounded-md border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:opacity-50 sm:py-2"
           >
-            Add to Bill
+            + Add to Bill
           </button>
         </div>
         {items.length === 0 && (
@@ -171,8 +185,9 @@ export function NewSaleForm({ items }: { items: SellableItem[] }) {
       </div>
 
       {cart.length > 0 && (
-        <div className="rounded-md border border-zinc-200">
-          <table className="w-full text-left text-sm">
+        <div className="rounded-lg border border-zinc-200">
+          {/* Table layout for wider screens */}
+          <table className="hidden w-full text-left text-sm sm:table">
             <thead>
               <tr className="border-b border-zinc-200 text-zinc-500">
                 <th className="p-2 font-medium">Item</th>
@@ -204,9 +219,86 @@ export function NewSaleForm({ items }: { items: SellableItem[] }) {
               ))}
             </tbody>
           </table>
+
+          {/* Stacked cards for narrow screens */}
+          <ul className="flex flex-col divide-y divide-zinc-100 sm:hidden">
+            {cart.map((line, index) => (
+              <li key={index} className="flex items-start justify-between gap-3 p-3">
+                <div>
+                  <p className="font-medium text-zinc-900">{line.itemName}</p>
+                  <p className="text-xs text-zinc-500">
+                    {line.weightKg.toFixed(2)}kg &times; {formatMoney(line.ratePerKg)}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <p className="font-medium text-zinc-900">
+                    {formatMoney(line.weightKg * line.ratePerKg)}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveLine(index)}
+                    className="text-xs text-red-600 hover:underline"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+
           <div className="flex justify-between border-t border-zinc-200 p-3 text-sm font-semibold text-zinc-900">
             <span>Grand Total</span>
             <span>{formatMoney(grandTotal)}</span>
+          </div>
+        </div>
+      )}
+
+      {cart.length > 0 && (
+        <div className="rounded-lg border border-zinc-200 p-3 sm:p-4">
+          <p className="mb-3 text-sm font-medium text-zinc-700">Payment</p>
+          <label className="mb-3 flex items-center gap-2 text-sm text-zinc-700">
+            <input
+              type="checkbox"
+              checked={fullyPaid}
+              onChange={(event) => setFullyPaid(event.target.checked)}
+              className="h-4 w-4"
+            />
+            Fully paid now
+          </label>
+          {!fullyPaid && (
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="amountReceivedInput" className="text-sm font-medium text-zinc-700">
+                Amount Received (Rs)
+              </label>
+              <input
+                id="amountReceivedInput"
+                type="number"
+                step="0.01"
+                min="0"
+                value={amountReceivedInput}
+                onChange={(event) => setAmountReceivedInput(event.target.value)}
+                className={inputClass}
+              />
+              {receivedTooHigh && (
+                <p className="text-sm text-red-600">
+                  Amount received can&apos;t exceed the bill total.
+                </p>
+              )}
+            </div>
+          )}
+          <div className="mt-3 flex justify-between text-sm">
+            <span className="text-zinc-500">Received</span>
+            <span className="font-medium text-zinc-900">
+              {formatMoney(amountReceived)}
+            </span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-zinc-500">Pending</span>
+            <span
+              className={`font-medium ${amountPending > 0 ? "text-amber-600" : "text-emerald-600"}`}
+            >
+              {formatMoney(amountPending)}
+            </span>
           </div>
         </div>
       )}
@@ -217,8 +309,10 @@ export function NewSaleForm({ items }: { items: SellableItem[] }) {
 
       <button
         type="submit"
-        disabled={pending || cart.length === 0}
-        className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50"
+        disabled={
+          pending || cart.length === 0 || !buyerId || receivedTooHigh
+        }
+        className="rounded-md bg-zinc-900 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 sm:py-2.5"
       >
         {pending ? "Saving..." : "Save & Print Bill"}
       </button>

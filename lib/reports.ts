@@ -35,11 +35,13 @@ type SaleLineDoc = {
 type SaleDoc = {
   _id: unknown;
   salesPersonId: { _id: unknown; name: string } | unknown;
+  buyerId: unknown;
   shopName: string;
   buyerName: string;
   lines: SaleLineDoc[];
   totalAmount: number;
   totalProfit: number;
+  amountReceived: number;
   status: SaleStatus;
   rejectionReason?: string;
   createdAt: Date;
@@ -49,6 +51,7 @@ type SaleDoc = {
 // weight/rate/cost are aggregated across its lines for ledger display.
 export type LedgerRow = {
   id: string;
+  buyerId: string;
   itemsSummary: string;
   shopName: string;
   buyerName: string;
@@ -57,6 +60,8 @@ export type LedgerRow = {
   totalAmount: number;
   costPerKgAtSale: number;
   profit: number;
+  amountReceived: number;
+  amountPending: number;
   createdAt: Date;
   salesPersonName: string;
   status: SaleStatus;
@@ -78,8 +83,11 @@ function toLedgerRow(doc: SaleDoc): LedgerRow {
     0
   );
 
+  const amountReceived = doc.amountReceived ?? 0;
+
   return {
     id: String(doc._id),
+    buyerId: String(doc.buyerId),
     itemsSummary,
     shopName: doc.shopName,
     buyerName: doc.buyerName,
@@ -88,6 +96,8 @@ function toLedgerRow(doc: SaleDoc): LedgerRow {
     totalAmount: doc.totalAmount,
     costPerKgAtSale: weightKg > 0 ? costWeighted / weightKg : 0,
     profit: doc.totalProfit,
+    amountReceived,
+    amountPending: Math.max(0, doc.totalAmount - amountReceived),
     createdAt: doc.createdAt,
     salesPersonName: salesPersonName(doc),
     status: doc.status,
@@ -98,10 +108,12 @@ function toLedgerRow(doc: SaleDoc): LedgerRow {
 export async function getLedger({
   period = "all",
   salesPersonId,
+  buyerId,
   status = "approved",
 }: {
   period?: LedgerPeriod;
   salesPersonId?: string;
+  buyerId?: string;
   status?: SaleStatus | "all";
 }): Promise<LedgerRow[]> {
   await connectDB();
@@ -111,6 +123,9 @@ export async function getLedger({
   if (start) match.createdAt = { $gte: start };
   if (salesPersonId) {
     match.salesPersonId = new mongoose.Types.ObjectId(salesPersonId);
+  }
+  if (buyerId) {
+    match.buyerId = new mongoose.Types.ObjectId(buyerId);
   }
   if (status !== "all") match.status = status;
 
@@ -128,10 +143,19 @@ export function summarizeLedger(rows: LedgerRow[]) {
       acc.totalWeightKg += row.weightKg;
       acc.totalAmount += row.totalAmount;
       acc.totalProfit += row.profit;
+      acc.totalReceived += row.amountReceived;
+      acc.totalPending += row.amountPending;
       acc.count += 1;
       return acc;
     },
-    { totalWeightKg: 0, totalAmount: 0, totalProfit: 0, count: 0 }
+    {
+      totalWeightKg: 0,
+      totalAmount: 0,
+      totalProfit: 0,
+      totalReceived: 0,
+      totalPending: 0,
+      count: 0,
+    }
   );
 }
 
@@ -139,6 +163,7 @@ export function summarizeLedger(rows: LedgerRow[]) {
 // approvals queue.
 export type SaleDetail = {
   id: string;
+  buyerId: string;
   shopName: string;
   buyerName: string;
   lines: {
@@ -149,6 +174,8 @@ export type SaleDetail = {
   }[];
   totalAmount: number;
   totalProfit: number;
+  amountReceived: number;
+  amountPending: number;
   createdAt: Date;
   salesPersonName: string;
   salesPersonId: string;
@@ -158,8 +185,10 @@ export type SaleDetail = {
 
 function toSaleDetail(doc: SaleDoc): SaleDetail {
   const person = doc.salesPersonId as { _id?: unknown; name?: string } | null;
+  const amountReceived = doc.amountReceived ?? 0;
   return {
     id: String(doc._id),
+    buyerId: String(doc.buyerId),
     shopName: doc.shopName,
     buyerName: doc.buyerName,
     lines: doc.lines.map((line) => ({
@@ -170,6 +199,8 @@ function toSaleDetail(doc: SaleDoc): SaleDetail {
     })),
     totalAmount: doc.totalAmount,
     totalProfit: doc.totalProfit,
+    amountReceived,
+    amountPending: Math.max(0, doc.totalAmount - amountReceived),
     createdAt: doc.createdAt,
     salesPersonName: person?.name ?? "Unknown",
     salesPersonId: person?._id ? String(person._id) : "",

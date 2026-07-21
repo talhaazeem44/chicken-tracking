@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/dal";
 import { connectDB } from "@/lib/db";
-import { ItemModel, SaleModel } from "@/lib/db/models";
+import { BuyerModel, ItemModel, SaleModel } from "@/lib/db/models";
 import { getStockSummary } from "@/lib/inventory";
 
 const SaleLineInputSchema = z.object({
@@ -22,11 +22,15 @@ const SaleLineInputSchema = z.object({
 });
 
 const CreateSaleSchema = z.object({
-  shopName: z.string().trim().min(1, { error: "Shop name is required." }),
-  buyerName: z.string().trim().min(1, { error: "Buyer name is required." }),
+  buyerId: z
+    .string()
+    .refine((v) => mongoose.isValidObjectId(v), { error: "Choose a buyer." }),
   lines: z
     .array(SaleLineInputSchema)
     .min(1, { error: "Add at least one item to the bill." }),
+  amountReceived: z.coerce
+    .number({ error: "Enter the amount received." })
+    .nonnegative({ error: "Amount received cannot be negative." }),
 });
 
 export type CreateSaleState = { error?: string } | undefined;
@@ -46,16 +50,24 @@ export async function createSale(
   }
 
   const validated = CreateSaleSchema.safeParse({
-    shopName: formData.get("shopName"),
-    buyerName: formData.get("buyerName"),
+    buyerId: formData.get("buyerId"),
     lines: parsedLines,
+    amountReceived: formData.get("amountReceived"),
   });
 
   if (!validated.success) {
     return { error: validated.error.issues[0]?.message ?? "Invalid input." };
   }
 
-  const { shopName, buyerName, lines } = validated.data;
+  const { buyerId, lines, amountReceived } = validated.data;
+
+  const buyer = await BuyerModel.findOne({ _id: buyerId, active: true }).lean<{
+    name: string;
+    shopName?: string;
+  } | null>();
+  if (!buyer) {
+    return { error: "Choose a valid, active buyer." };
+  }
 
   // Multiple lines can reference the same item; check total requested
   // quantity per item against that item's stock balance.
@@ -111,13 +123,21 @@ export async function createSale(
     };
   });
 
+  if (amountReceived > totalAmount) {
+    return {
+      error: `Amount received (${amountReceived.toFixed(2)}) can't exceed the bill total (${totalAmount.toFixed(2)}).`,
+    };
+  }
+
   const sale = await SaleModel.create({
     salesPersonId: session.userId,
-    shopName,
-    buyerName,
+    buyerId,
+    buyerName: buyer.name,
+    shopName: buyer.shopName ?? "",
     lines: builtLines,
     totalAmount,
     totalProfit,
+    amountReceived,
     status: "pending",
   });
 
@@ -126,6 +146,7 @@ export async function createSale(
   revalidatePath("/admin/ledger");
   revalidatePath("/admin");
   revalidatePath("/admin/approvals");
+  revalidatePath(`/admin/buyers/${buyerId}`);
 
   redirect(`/sales/receipt/${sale._id.toString()}`);
 }

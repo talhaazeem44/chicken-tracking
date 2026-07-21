@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getPendingSales } from "@/lib/reports";
 import { formatMoney, formatKg, formatDateTime } from "@/lib/format";
 import { approveSale } from "@/lib/actions/approvals";
@@ -31,15 +32,28 @@ export default async function AdminApprovalsPage() {
               <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="text-sm font-semibold text-zinc-900">
-                    {sale.shopName} · {sale.buyerName}
+                    <Link
+                      href={`/admin/buyers/${sale.buyerId}`}
+                      className="hover:underline"
+                    >
+                      {sale.buyerName}
+                    </Link>
+                    {sale.shopName && ` · ${sale.shopName}`}
                   </p>
                   <p className="text-xs text-zinc-500">
                     {sale.salesPersonName} · {formatDateTime(sale.createdAt)}
                   </p>
                 </div>
-                <p className="text-lg font-semibold text-zinc-900">
-                  {formatMoney(sale.totalAmount)}
-                </p>
+                <div className="text-right">
+                  <p className="text-lg font-semibold text-zinc-900">
+                    {formatMoney(sale.totalAmount)}
+                  </p>
+                  <p className="text-xs text-zinc-500">
+                    Received {formatMoney(sale.amountReceived)}
+                    {sale.amountPending > 0 &&
+                      ` · Pending ${formatMoney(sale.amountPending)}`}
+                  </p>
+                </div>
               </div>
 
               <div className="mb-4 overflow-x-auto">

@@ -11,7 +11,7 @@ export function NavLinks({
   const pathname = usePathname();
 
   return (
-    <nav className="flex flex-col gap-1">
+    <nav className="flex flex-row flex-wrap gap-1 md:flex-col md:flex-nowrap">
       {links.map((link) => {
         const isActive =
           link.href === pathname || pathname.startsWith(`${link.href}/`);
@@ -19,7 +19,7 @@ export function NavLinks({
           <Link
             key={link.href}
             href={link.href}
-            className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+            className={`whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors ${
               isActive
                 ? "bg-zinc-900 text-white"
                 : "text-zinc-600 hover:bg-zinc-100"

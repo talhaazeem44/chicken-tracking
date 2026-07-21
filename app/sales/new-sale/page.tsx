@@ -1,13 +1,15 @@
 import { requireRole } from "@/lib/dal";
 import { getStockSummaryByItem } from "@/lib/inventory";
 import { getItems } from "@/lib/items";
+import { getActiveBuyers } from "@/lib/buyers";
 import { NewSaleForm } from "./new-sale-form";
 
 export default async function NewSalePage() {
   const session = await requireRole("sales");
-  const [stockByItem, items] = await Promise.all([
+  const [stockByItem, items, buyers] = await Promise.all([
     getStockSummaryByItem(session.userId),
     getItems(),
+    getActiveBuyers(),
   ]);
 
   const itemMap = new Map(items.map((item) => [item.id, item]));
@@ -34,8 +36,14 @@ export default async function NewSalePage() {
         </p>
       </div>
 
-      <div className="max-w-lg rounded-xl border border-zinc-200 bg-white p-6">
-        <NewSaleForm items={sellableItems} />
+      <div className="rounded-xl border border-zinc-200 bg-white p-4 sm:p-6 md:max-w-2xl">
+        <NewSaleForm
+          items={sellableItems}
+          buyers={buyers.map((b) => ({
+            id: b.id,
+            name: b.shopName ? `${b.name} — ${b.shopName}` : b.name,
+          }))}
+        />
       </div>
     </div>
   );

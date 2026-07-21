@@ -37,6 +37,7 @@ export default async function AdminUsersPage() {
               No sales accounts yet.
             </p>
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-zinc-200 text-zinc-500">
@@ -103,6 +104,7 @@ export default async function AdminUsersPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>
